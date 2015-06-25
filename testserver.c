@@ -3,13 +3,13 @@
  **                  Source File: testserver.c                                 *
  **                                                                            *
  **                                                                            *
- ** Date:   2015.6.20                                                          *
- ** team:                                                                      *
+ ** Date:   2015.6.25                                                          *
+ ** team:    ych&lx                                                                  *
  ** Author: leixin                                                             *
  **                                                                            *
  ** Email:  340068408@qq.com                                                   *
  ** description:                                                               *
- **          .																   *
+ **   								               *
  **                                                                            *
  ** modification history:                                                      *
  **                                                                            *
@@ -32,12 +32,11 @@
 #define GET_PHONE_INFO "get_phone_info"
 
 void handle_get_phoneinfo();
+int build_server();
+void show_ui();
 
 int main(int ac, char *av[])
 {
-	struct sockaddr_in saddr;
-	struct hostent *hp;
-	char hostname[HOSTLEN];
 	char phone_info[BUFSIZ];
 	char command[128];
 	char recv_buf[BUFSIZ];
@@ -47,9 +46,57 @@ int main(int ac, char *av[])
 	char *result;
 	FILE *sock_fp;
 	
+	sock_id = build_serve();
+	while(1) {
+		sock_fd = accept(sock_id,NULL,NULL);
+		if(sock_fd == -1)
+			oops("accept");	
+		printf("Connect Success!\n");
 
-	sock_id = socket(AF_INET,SOCK_STREAM,0);
-	if(sock_id == -1)
+		while(1) {
+			show_ui();
+			result = fgets(command,128,stdin);
+			if(result != NULL) {
+				printf("\nyour input is:%s\n",command);
+				if(strncmp(command,"1",1)==0){
+					printf("executing get_phone_info...\n");
+					handle_get_phoneinfo(sock_fd,chars_phoneinfo,recv_buf);		
+				}
+				if(strncmp(command,"3",1)==0) {
+					break;
+				}
+				if(strncmp(command,"4",1)==0) {
+					close(sock_fd);
+					shutdown(sock_fd,2);
+					exit(1);
+				}
+			}
+		}
+		printf("Connect closed!\n");
+		shutdown(sock_fd,2);
+	}
+}
+
+show_ui()
+{
+	printf("----------------------------------------------------------\n");	
+	printf("-------------------Welcome to LAMT!-----------------------\n");
+	printf("1.Get phone info\n");
+	printf("2.\n");
+	printf("3.close this connect\n");
+	printf("4.quit\n");
+	printf("Please choose option:");
+}
+
+int build_serve()
+{
+	struct sockaddr_in saddr; 
+	int socket_id;	
+	struct hostent *hp;
+	char hostname[HOSTLEN];
+
+	socket_id = socket(AF_INET,SOCK_STREAM,0);
+	if(socket_id == -1)
 		oops("socket");
 	
 	bzero((void *)&saddr,sizeof(saddr));
@@ -61,38 +108,14 @@ int main(int ac, char *av[])
 	saddr.sin_addr.s_addr = htonl(INADDR_ANY);
 	saddr.sin_family = AF_INET;
 
-	if(bind(sock_id,(struct sockaddr *)&saddr,sizeof(saddr))!= 0)
+	if(bind(socket_id,(struct sockaddr *)&saddr,sizeof(saddr))!= 0)
 		oops("bind");
 	
-	if(listen(sock_id,1)!= 0) 
+	if(listen(socket_id,1)!= 0) 
 		oops("listen");
-
-	while(1) {
-		sock_fd = accept(sock_id,NULL,NULL);
-		printf("Connect Success!\n");
-		if(sock_fd == -1)
-			oops("accept");
-		/*
-		sock_fp = fdopen(sock_fd,"r");
-		if(sock_fp == NULL)
-			oops("fdopen");*/	
-		
-		while(1) {
-			printf("input command:");
-			result = fgets(command,128,stdin);
-			if(result != NULL) {
-				printf("your input:%s\n",command);
-				if(strncmp(command,GET_PHONE_INFO,strlen(GET_PHONE_INFO))==0) {
-					printf("executing get_phone_info...\n");
-					handle_get_phoneinfo(sock_fd,chars_phoneinfo,recv_buf);		
-				}
-			}
-		}
-		printf("Connect closed!\n");
-		//fclose(sock_fp);
-		shutdown(sock_fd,2);
-	}
+	return socket_id;
 }
+
 
 /*
 int getline(char *str,int lim)
@@ -119,14 +142,4 @@ void handle_get_phoneinfo(int fd,char str[],char buf[])
 	printf("%s\n",buf);
 		
 }
-/*
-int getline(char *str,int len,FILE *file)
-{
-	int c,len;
-	
-	while((c = getc(sock_fp))!=EOF) {
-		
-	}
-}
-*/
 
